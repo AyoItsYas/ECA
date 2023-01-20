@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from typing import Callable
 
 
-from gates import gate_and, gate_xor
+from circuits.gates import gate_and, gate_xor
 
 
 def half_adder(line_in_A: bool, line_in_B: bool) -> tuple[bool, bool]:
