@@ -18,6 +18,12 @@ class Latch:
     def __call__(self) -> bool:
         return self.__charge
 
+    def __repr__(self) -> str:
+        return str(int(self.__charge))
+
+    def __bool__(self) -> bool:
+        return self.__charge
+
     def circuit(self, set: bool = False, reset: bool = False):
         self.__charge = gate_and([gate_or([self.__charge, set]), gate_not(reset)])
         return self.__charge
@@ -31,13 +37,17 @@ class Latch:
 
 class Memory:
     def __init__(
-        self, *, matrix_size, multiplexer: Callable[[Iterable[bool]], Iterable[bool]]
+        self,
+        *,
+        matrix_size: int,
+        multiplexer: Callable[[Iterable[bool]], Iterable[bool]],
     ):
         """An abstract class to base any type of memory.
 
         Args:
-            matrix_size (_type_): Matrix size of the memory.
-            multiplexer (Callable[[Iterable[bool]], Iterable[bool]]): Multiplexer circuit handling the selction of rows, columns of the matrix.
+            matrix_size (int): Matrix size of the memory.
+            multiplexer (Callable[[Iterable[bool]], Iterable[bool]]):
+                Multiplexer circuit handling the selction of rows, columns of the matrix.
         """
         self.__matrix_size = matrix_size
 
@@ -96,7 +106,7 @@ class Memory:
 
 
 class ReadOnlyMemeory(Memory):
-    def write(self, *args, **kwargs) -> None:
+    def write(self) -> None:
         """
         Raises:
             NotImplementedError: Unsupported.

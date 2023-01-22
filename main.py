@@ -1,13 +1,5 @@
 from circuits.adders import dynamic_adder
-from circuits.components.memory import Latch
 
-# latch = Latch()
-
-# latch.set()
-# print(latch())
-
-# latch.reset()
-# print(latch())
 
 X = [int(x) for x in input("X: ")]
 Y = [int(y) for y in input("X: ")]
