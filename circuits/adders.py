@@ -10,6 +10,15 @@ from circuits.gates import gate_and, gate_xor
 
 
 def half_adder(line_in_A: bool, line_in_B: bool) -> tuple[bool, bool]:
+    """Half adder circuit to perform bianary additions.
+
+    Args:
+        line_in_A (bool): Line A for the circuit.
+        line_in_B (bool): Line B for the circuit.
+
+    Returns:
+        tuple[bool, bool]: Line out carrying the sum and carry respectively.
+    """
     return gate_xor(line_in_A, line_in_B), gate_and([line_in_A, line_in_B])
 
 
@@ -19,6 +28,18 @@ def dynamic_adder(
     *,
     adder: Callable[[bool, bool], tuple[bool, bool]] = half_adder,
 ) -> tuple[list[bool], bool]:
+    """A dynamic adder that can be used to perform bianry addition while handling the bit size.
+
+    Args:
+        lines_in_A (list[bool]): Line A bits.
+        lines_in_B (list[bool]): Line B bits.
+        adder (Callable[[bool, bool], tuple[bool, bool]], optional):
+            A callable adder circuit that returns the sum and carry for given two bits.
+            Defaults to half_adder.
+
+    Returns:
+        tuple[list[bool], bool]: Returns the sum and carry for the given bits respectively.
+    """
     result = []
     add_carry = None
     for line_in_A, line_in_B in zip(lines_in_A[::-1], lines_in_B[::-1]):
@@ -36,9 +57,3 @@ def dynamic_adder(
 
     result.reverse()
     return result, add_carry
-
-
-dynamic_adder([0, 0, 1, 0], [0, 0, 1, 0])
-dynamic_adder([0, 1, 0, 1], [0, 1, 0, 1])
-dynamic_adder([1, 1, 1, 1], [1, 1, 1, 1])
-dynamic_adder([1, 1, 1, 1, 1], [1, 1, 1, 1, 1])
