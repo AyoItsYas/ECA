@@ -19,3 +19,20 @@ def generate_line_map(lines_count: int) -> list[list[bool]]:
         lines += [(([False] * lines_power) + ([True] * lines_power)) * repeat]
 
     return lines
+
+
+class Logger:
+    def __init__(self):
+        self.__streams = []
+        self.__streams_offset = 0
+
+    def log(self, stream: str, content: str):
+        print(stream.ljust(self.__streams_offset), ":", content)
+
+    def get_logger(self, stream: str):
+        self.register_stream(stream)
+        return lambda x: self.log(stream, x)
+
+    def register_stream(self, stream: str):
+        self.__streams.append(stream)
+        self.__streams_offset = max(len(x) for x in self.__streams)

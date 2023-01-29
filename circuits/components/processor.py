@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from memory import Memory
+    from typing import Callable
 
 import time
 
-from circuits.components.memory import RandomAccessMemory
+from circuits.components.bus import Bus
 
 
 class ArithmeticLogicUnit:
@@ -17,35 +17,55 @@ class ArithmeticLogicUnit:
         return
 
 
-class CentralProcessingUnit:
-    def __init__(self, clock_speed: float, *, size: int = 16):
+class CPU:
+    def __init__(
+        self,
+        data_lines: Bus,
+        address_lines: Bus,
+        clock_speed: float,
+        *,
+        size: int = 8,
+        logger: Callable,
+    ):
+        self.__log = logger
+
         self.size = size
         self.clock_speed = clock_speed
 
         self.__instruction = 0
         self.__instruction_address = 0
 
-        self.__memory: Memory = RandomAccessMemory(size=16)
+        self.__data_lines = data_lines
+        self.__address_lines = address_lines
+
+        self.__run_flag = True
+
+        self.__log("Start up complete!")
 
     def fetch(self):
-        self.__memory.read()
+        self.__log("Fetching")
         pass
 
     def decode(self):
+        self.__log("Decoding")
         pass
 
     def execute(self):
+        self.__log("Executing")
         pass
 
     def cycle(self):
+        self.__log("Cycle start")
+
         self.fetch()
         self.decode()
         self.execute()
 
-    def run(self):
-        self.__status = 0
+        self.__log("Cycle end")
 
-        while True:
+    def run(self):
+        self.__log("Starting processor cycle")
+        while self.__run_flag:
             cycle_s = time.perf_counter()
             self.cycle()
             cycle_e = time.perf_counter()
@@ -56,3 +76,8 @@ class CentralProcessingUnit:
                 pass  # raise a warning as the clock speed can't catch up
             else:
                 time.sleep(self.clock_speed - cycle_d)
+
+        self.__log("Ending processor cycle")
+
+    def reset(self):
+        self.__run_flag = False

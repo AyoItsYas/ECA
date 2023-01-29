@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable, Iterable
+    from typing import Callable
+    from circuits.components.bus import Bus
 
 
 from circuits.gates import gate_and, gate_or, gate_not
@@ -37,88 +38,40 @@ class Latch:
 
 class Memory:
     def __init__(
-        self,
-        *,
-        matrix_size: int,
-        multiplexer: Callable[[Iterable[bool]], Iterable[bool]],
+        self, data_lines: Bus, address_lines: Bus, *, size: int, logger: Callable
     ):
-        """An abstract class to base any type of memory.
+        self.__log = logger
 
-        Args:
-            matrix_size (int): Matrix size of the memory.
-            multiplexer (Callable[[Iterable[bool]], Iterable[bool]]):
-                Multiplexer circuit handling the selction of rows, columns of the matrix.
-        """
-        self.__matrix_size = matrix_size
+        self.__data_lines = data_lines
+        self.__address_lines = address_lines
 
-        self.__memory_matrix = None
+        get_latch = lambda: Latch()
+        self.__memory_matrix = [[get_latch()] * size] * size
 
-        self.__buffer = None
-        self.__buffer_size = matrix_size // 2
-        self.__buffer_cut = self.__buffer_size // 2
+        self.__log("Start up complete!")
 
-        self.__multiplexer = multiplexer
+    def decode(self) -> tuple[bool]:
+        address = self.__address_lines.read()
+        address_inverse = [gate_not(x) for x in address]
 
-        self.reset()
+        self.__log(f"Decoding address > {address}")
 
-    def reset(self):
-        """Rests the memory matrix and the buffer lines."""
-        self.__buffer = [0] * self.__buffer_size
-        self.__memory_matrix: list[list[Latch]] = [
-            [Latch()] * self.__matrix_size
-        ] * self.__matrix_size
+        decoder_lines = []
 
-    def plex(self, set: bool, address: Iterable[bool]):
-        """Calls the multiplexer citcuit and dumps the data line values into the memeory buffer lines.
+        i, step, size = 0, 1, 2 ** len(address)
+        while step < size:
+            line = [*[address[i]] * step, *[address_inverse[i]] * step]
+            line = line * (size // len(line))
 
-        Args:
-            set (bool): Line in for setting or reseting the latches.
-            address (Iterable[bool]): Memory address the size of the buffer size.
-        """
-        row, col = address[0 : self.__buffer_cut], address[self.__buffer_cut :]
-        self.__buffer = self.__multiplexer(set, row)
-        self.__buffer = self.__multiplexer(set, col)
+            decoder_lines += [line]
 
-    def fetch(
-        self, address: Iterable[bool], value: Iterable[bool] = None
-    ) -> Iterable[bool]:
-        """Fetches the values at a given address.
+            i, step = i + 1, step * 2
 
-        Args:
-            address (Iterable[bool]): Memory address the size of the buffer size.
-
-        Returns:
-            Iterable[bool]: Stored values on the given address.
-        """
-        self.plex(address)
-        return self.__buffer
-
-    def read(self, address: Iterable[bool]) -> Iterable[bool]:
-        """Reads the values at a given address.
-
-        Args:
-            address (Iterable[bool]): Memory address the size of the buffer size.
-
-        Returns:
-            Iterable[bool]: Stored values on the given address.
-        """
-        return self.fetch(False, address)
+        return (gate_and(line) for line in zip(*decoder_lines))
 
 
-class ReadOnlyMemeory(Memory):
-    def write(self) -> None:
-        """
-        Raises:
-            NotImplementedError: Unsupported.
-        """
-        raise NotImplementedError
-
-
-class RandomAccessMemory(Memory):
-    def write(self, address: Iterable[bool], value: Iterable[bool]) -> None:
-        """Writes the giiven values to a given address.
-
-        Args:
-            address (Iterable[bool]): Memory address the size of the buffer size.
-        """
-        self.fetch(True, address, value)
+class RAM(Memory):
+    def __init__(
+        self, data_lines: Bus, address_lines: Bus, *, size: int, logger: Callable
+    ):
+        super().__init__(data_lines, address_lines, size=size, logger=logger)
