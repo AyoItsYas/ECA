@@ -8,10 +8,13 @@ if TYPE_CHECKING:
 
 class Bus:
     def __init__(self, size: int = 8):
-        self.__value = (0) * size
+        self.__value = (0,) * size
 
     def __call__(self, value: Iterable[bool] = None):
         return self.read() if value is None else self.write(value)
+
+    def __len__(self):
+        return len(self.__value)
 
     def read(self) -> Iterable[bool]:
         return self.__value
@@ -20,4 +23,5 @@ class Bus:
         if len(value) != len(self.__value):
             return
 
-        self.value = value
+        self.__value = value
+        return self.__value

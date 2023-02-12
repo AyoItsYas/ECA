@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Callable
 
+import time
 
-from circuits.utils import Logger
+from circuits.utils.logger import Logger
 
 from circuits.components.bus import Bus
 from circuits.components.memory import RAM
@@ -18,23 +19,28 @@ LOGGER = Logger()
 
 class Computer:
     def __init__(
-        self, size: int, *, logger: Callable, start_up_hook: Callable[[Computer]] = None
+        self,
+        size: int,
+        *,
+        logger: Callable[[str, str], None],
+        start_up_hook: Callable[[Computer]] = None,
     ):
         self.__log = logger
 
+        self.clock_speed = 1
+
         self.__data_lines = Bus(size)
-        self.__address_lines = Bus()
+        self.__address_lines = Bus(16 + 1)
 
         self.__primary_memory = RAM(
             self.__data_lines,
             self.__address_lines,
-            size=size,
             logger=LOGGER.get_logger("RAM"),
         )
         self.__processing_unit = CPU(
             self.__data_lines,
             self.__address_lines,
-            1,
+            self.clock_speed,
             size=size,
             logger=LOGGER.get_logger("CPU"),
         )
@@ -42,26 +48,38 @@ class Computer:
         if start_up_hook:
             start_up_hook(self)
 
-        self.__log("Start up complete!")
-
     def run(self):
-        self.__processing_unit.run()
+        self.__processing_unit.cycle()
+
+        cycle_hooks = (
+            self.__primary_memory.cycle,
+            self.__processing_unit.cycle,
+        )
+        if self.clock_speed > 0:
+            while True:
+                cycle_s = time.perf_counter()
+                for hook in cycle_hooks:
+                    hook()
+                cycle_e = time.perf_counter()
+
+                cycle_d = cycle_e - cycle_s
+
+                if cycle_d > self.clock_speed:
+                    self.clock_speed = cycle_d * 1.25
+                else:
+                    time.sleep(self.clock_speed - cycle_d)
+        else:
+            while True:
+                for hook in cycle_hooks:
+                    hook()
 
     def reset(self):
         self.__processing_unit.reset()
 
 
-def start_up(computer: Computer):
-    computer.run()
-
-
 def main():
-    logger = LOGGER.get_logger("MAIN")
-    logger("Starting up")
-
-    computer = Computer(8, logger=LOGGER.get_logger("COM"), start_up_hook=start_up)
-
-    logger("Exitting")
+    computer = Computer(8, logger=LOGGER.get_logger("COM"))
+    computer.run()
 
 
 if __name__ == "__main__":

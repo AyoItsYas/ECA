@@ -7,14 +7,16 @@ if TYPE_CHECKING:
     from circuits.components.bus import Bus
 
 
+from circuits.utils.formatting import bits_to_string
+
 from circuits.gates import gate_and, gate_or, gate_not
 
 
 class Latch:
     """A latch circuit emulating the functionality of an AND-OR latch."""
 
-    def __init__(self):
-        self.__charge = False
+    def __init__(self, charge: bool = False):
+        self.__charge = charge
 
     def __call__(self) -> bool:
         return self.__charge
@@ -31,14 +33,20 @@ class Latch:
 
     def set(self):
         self.circuit(True)
+        return self.__call__()
 
     def reset(self):
         self.circuit(False, True)
+        return self.__call__()
 
 
 class Memory:
     def __init__(
-        self, data_lines: Bus, address_lines: Bus, *, size: int, logger: Callable
+        self,
+        data_lines: Bus,
+        address_lines: Bus,
+        *,
+        logger: Callable[[str, str], None],
     ):
         self.__log = logger
 
@@ -46,15 +54,15 @@ class Memory:
         self.__address_lines = address_lines
 
         get_latch = lambda: Latch()
-        self.__memory_matrix = [[get_latch()] * size] * size
+        self.__memory_matrix = [[get_latch()] * 8] * (2 ** len(address_lines))
 
-        self.__log("Start up complete!")
+        self.__log(f"Memory size {len(self.__memory_matrix):,} bytes")
 
     def decode(self) -> tuple[bool]:
-        address = self.__address_lines.read()
-        address_inverse = [gate_not(x) for x in address]
+        address = _raw_address = self.__address_lines.read()
 
-        self.__log(f"Decoding address > {address}")
+        address, reset = address[1:], address[0]
+        address_inverse = [gate_not(x) for x in address]
 
         decoder_lines = []
 
@@ -67,11 +75,29 @@ class Memory:
 
             i, step = i + 1, step * 2
 
-        return (gate_and(line) for line in zip(*decoder_lines))
+        decoder_lines = [gate_and(line) for line in zip(*decoder_lines)]
+        decoder_lines.reverse()
+
+        latches = []
+        for decode, chunk in zip(decoder_lines, self.__memory_matrix):
+            if decode:
+                latches = chunk
+                break
+
+        data = []
+        for latch, new_data in zip(latches, self.__data_lines.read()):
+            data.append(latch.reset() if reset and new_data else latch())
+
+        self.__data_lines.write(data)
+        format_spec = "DEC {} >>> {}".format(
+            bits_to_string(_raw_address, "addr"), bits_to_string(data)
+        )
+        self.__log(format_spec)
+
+    def cycle(self):
+        self.decode()
 
 
 class RAM(Memory):
-    def __init__(
-        self, data_lines: Bus, address_lines: Bus, *, size: int, logger: Callable
-    ):
-        super().__init__(data_lines, address_lines, size=size, logger=logger)
+    def __init__(self, data_lines: Bus, address_lines: Bus, *, logger: Callable):
+        super().__init__(data_lines, address_lines, logger=logger)

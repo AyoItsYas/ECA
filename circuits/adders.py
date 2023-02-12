@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from typing import Callable, Iterable
 
 
 from circuits.gates import gate_and, gate_xor
 
 
-def half_adder(line_in_A: bool, line_in_B: bool) -> tuple[bool, bool]:
+def adder(line_in_A: bool, line_in_B: bool) -> tuple[bool, bool]:
     """Half adder circuit to perform bianary additions.
 
     Args:
@@ -23,10 +23,10 @@ def half_adder(line_in_A: bool, line_in_B: bool) -> tuple[bool, bool]:
 
 
 def dynamic_adder(
-    lines_in_A: list[bool],
-    lines_in_B: list[bool],
+    lines_in_A: Iterable[bool],
+    lines_in_B: Iterable[bool],
     *,
-    adder: Callable[[bool, bool], tuple[bool, bool]] = half_adder,
+    adder: Callable[[bool, bool], tuple[bool, bool]] = adder,
 ) -> tuple[list[bool], bool]:
     """A dynamic adder that can be used to perform bianry addition while handling the bit size.
 
@@ -40,20 +40,18 @@ def dynamic_adder(
     Returns:
         tuple[list[bool], bool]: Returns the sum and carry for the given bits respectively.
     """
-    result = []
-    add_carry = None
-    for line_in_A, line_in_B in zip(lines_in_A[::-1], lines_in_B[::-1]):
+    result, add_carry = [], None
 
-        sum, carry = adder(line_in_A, line_in_B)
+    for line_A, line_B in zip(lines_in_A[::-1], lines_in_B[::-1]):
+        value, carry = adder(line_A, line_B)
 
         if add_carry:
-            sum, _ = adder(sum, True)
+            value, carry = adder(value, True)
             add_carry = False
 
         if carry:
             add_carry = True
 
-        result.append(sum)
+        result.insert(0, value)
 
-    result.reverse()
-    return result, add_carry
+    return result, carry
