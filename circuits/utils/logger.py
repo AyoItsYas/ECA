@@ -6,12 +6,12 @@ class Logger:
         "WARN",
     ]
 
-    def __init__(self, format_spec: str = None):
+    def __init__(self, format_skel: str = None):
         self.__streams = []
         self.__streams_offset = 0
         self.__level_offset = max(len(x) for x in self.LEVELS)
 
-        self.__format_spec = format_spec or "{} - {} : {}"
+        self.__format_spec = format_skel or "{} - {} : {}"
 
     def log(
         self,

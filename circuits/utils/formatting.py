@@ -9,26 +9,26 @@ if TYPE_CHECKING:
 def bits_to_string(
     bit_stream: Iterable[bool],
     format: str = "b",
-    format_spec: str = None,
+    format_skel: str = None,
     return_args: bool = False,
 ) -> Union[str, tuple[str]]:
     if format == "b":
-        format_spec = format_spec or "0b{}"
+        format_skel = format_skel or "0b{}"
         format_args = ("".join("1" if x else "0" for x in bit_stream),)
     elif format == "h":
-        format_spec = format_spec or "{}"
+        format_skel = format_skel or "{}"
         format_args = (str(hex(int("".join("1" if x else "0" for x in bit_stream)))),)
     elif format == "o":
-        format_spec = format_spec or "{}"
+        format_skel = format_skel or "{}"
         format_args = (str(oct(int("".join("1" if x else "0" for x in bit_stream)))),)
     elif format == "addr":
-        format_spec = format_spec or "{} {} ({})"
+        format_skel = format_skel or "{} {} ({})"
         format_args = (
             "W" if bit_stream[0] else "R",
             bits_to_string(bit_stream[1:]),
             bits_to_string(bit_stream[1:], "h"),
         )
     else:
-        format_spec, format_args = None, None
+        format_skel, format_args = None, None
 
-    return format_args if return_args else format_spec.format(*format_args)
+    return format_args if return_args else format_skel.format(*format_args)
