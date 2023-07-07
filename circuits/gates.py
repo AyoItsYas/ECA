@@ -26,7 +26,12 @@ def transistor(
     else:
         line_out = line_in if control else False
 
-    return (control, line_in, line_out)[return_line]
+    return_lines = (control, line_in, line_out)
+
+    if return_line:
+        return return_lines[return_line]
+    else:
+        return return_lines
 
 
 def gate_not(line_in: bool) -> bool:

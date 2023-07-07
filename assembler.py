@@ -1,4 +1,4 @@
-from circuits.components.memory import Latch
+import sys
 
 instruction_set = {
     "NULL": "00000000",
@@ -7,7 +7,9 @@ instruction_set = {
     "ACCM": "00000011",
 }
 
-with open("test.asm", "r") as file:
+input_file = sys.argv[1]
+
+with open(input_file, "r") as file:
     lines = file.readlines()
 
 
@@ -37,8 +39,5 @@ lines = sanitize(lines)
 image = compile(lines)
 
 
-def create_latch(charge: bool = False):
-    return Latch(charge)
-
-
-matrix = [[create_latch(x == "1") for x in row] for row in image]
+with open(input_file + ".bin", "w") as file:
+    file.write("\n".join(image))

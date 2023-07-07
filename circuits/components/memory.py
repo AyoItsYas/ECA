@@ -58,60 +58,75 @@ class Memory:
         *,
         logger: Callable[[str, str], None],
     ):
-        self.__log = logger
+        self.__log = lambda *x, **y: logger(*x, origin=__name__, **y)
 
         self.__data_lines = data_lines
         self.__address_lines = address_lines
 
-        self.__memory_matrix = UniqueCopy(UniqueCopy([UniqueCopy([Latch()]) * 8])) * (
-            2 ** (len(address_lines) - 1)
-        )
+        # make a memory matrix
+
+        matrix = []
+        for _ in range(2 ** (len(address_lines) - 1)):
+            matrix.append([Latch() for _ in range(8)])
+
+        self.__memory_matrix = matrix
+
+        self.__memory_matrix
 
         self.__log(f"Memory size {len(self.__memory_matrix):,} bytes")
 
     def decode_hook(self):
         data = self.__data_lines.read()
-        addr_o = self.__address_lines.read()
+        addr_o = self.__address_lines.read()  # storing the address
 
         ctrl, addr = addr_o[0], addr_o[1:]
+        addr_inv = [gate_not(x) for x in addr]
 
-        # preparing the lines that feed the decoder circuit
+        # preping decoder lines and logic
 
-        decoder_lines = []
-        addr_i = [gate_not(x) for x in addr]
-        i, step, size = 0, 1, 2 ** len(addr)
-        while step < size:
-            line = [*[addr[i]] * step, *[addr_i[i]] * step]
-            line = line * (size // len(line))
+        size = 2 ** len(addr)
+        decoder_lines: list[
+            list
+        ] = []  # arranging the lines in the form of a truth table for the decoder
 
-            decoder_lines += [line]
+        i = 0
+        x = size // 2
+        while x > 0:
+            y = 0
+            deck = False
+            for _ in range(size // x):
+                for _ in range(x):
+                    decoder_lines.append(addr[i] if deck else addr_inv[i])
+                    y += 1
 
-            i, step = i + 1, step * 2
+                deck = not deck
 
-        # feeding the decoder the data and address values
+            i += 1
+            x = x // 2
 
-        decoder_lines = [gate_and(line) for line in zip(*decoder_lines)]
-        decoder_lines.reverse()
+        decoder_lines = [
+            decoder_lines[i : i + size] for i in range(0, len(decoder_lines), size)
+        ]  # arranging the lines to be fed into logic
 
-        # isolating the latches responsible for the address
+        decoder_lines = [
+            gate_and(x) for x in zip(*decoder_lines)
+        ]  # feeding the lines into logic and finalizing the address select
 
-        latches: list[Latch] = None
-        for decode, latches in zip(decoder_lines, self.__memory_matrix):
+        # decode the address and perform action
+
+        for decode, byte in zip(decoder_lines, self.__memory_matrix):
             if decode:
-                break
-
-        data = []
-        for latch, new_value in zip(latches, self.__data_lines.read()):
-            data.append(latch.circuit(new_value, ctrl) if ctrl and new_value else latch())
-
-        self.__data_lines.write(data)
+                self.__data_lines.write(byte)
+                if ctrl:
+                    for latch, value in zip(byte, data):
+                        latch.circuit(value)
 
         # logging
 
         format_skel = "DEC {} >>> {}".format(
             bits_to_string(addr_o, "addr"), bits_to_string(data)
         )
-        self.__log(format_skel)
+        self.__log(format_skel, "DEBG")
 
     def set_memory_image(self, memory_image: Iterable[Iterable[Latch]]):
         from circuits.adders import dynamic_adder

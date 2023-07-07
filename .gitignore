@@ -1,1 +1,6 @@
 __pycache__
+.venv/
+.vscode/
+.exclude/
+*.eca
+*.eca.bin

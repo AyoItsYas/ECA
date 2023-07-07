@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -15,46 +17,13 @@ from circuits.components.processor import CPU
 
 from circuits.components.memory import Latch
 
-instruction_set = {
-    "NULL": "00000000",
-    "JUMP": "00000001",
-    "LOAD": "00000010",
-    "ACCM": "00000011",
-}
-
-with open("test.eca", "r") as file:
-    lines = file.readlines()
-
-
-def sanitize(lines: list[str]):
-    return [line.strip("\n") for line in lines]
-
-
-def compile(lines: list[str]):
-    result = []
-    for line in lines:
-        chunks = line.split()
-
-        instruction = instruction_set.get(chunks.pop(0))
-        if instruction is None:
-            raise Exception(f"'{chunks[0]}' is an invalid instruction")
-
-        result.append(instruction)
-
-        for chunk in chunks:
-            chunk = chunk.rjust(8, "0")
-            result.append(chunk)
-
-    return result
-
-
-lines = sanitize(lines)
-lines = compile(lines)
-
 
 def create_latch(charge: bool = False):
     return Latch(charge)
 
+
+with open(sys.argv[1], "r") as file:
+    lines = file.readlines()
 
 image = [[create_latch(x == "1") for x in row] for row in lines]
 
@@ -68,9 +37,9 @@ class Computer:
         *,
         logger: Callable[[str, str], None],
     ):
-        self.clock = 4
+        self.clock = 5
 
-        self.__log = logger
+        self.__log = lambda *x, **y: logger(*x, origin=__name__, **y)
 
         self.__data_lines = Bus()
         self.__address_lines = Bus(4)
