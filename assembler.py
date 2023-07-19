@@ -3,8 +3,10 @@ import sys
 instruction_set = {
     "NULL": "00000000",
     "JUMP": "00000001",
-    "LOAD": "00000010",
-    "ACCM": "00000011",
+    "LDAV": "00000010",
+    "DMPM": "00000011",
+    "ACCM": "00000100",
+    "PRNT": "00000101",
 }
 
 input_file = sys.argv[1]

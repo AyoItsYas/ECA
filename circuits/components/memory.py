@@ -4,7 +4,7 @@ import copy
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Callable, Iterable
+    from typing import Callable
     from circuits.components.bus import Bus
 
 from circuits.gates import gate_and, gate_not, gate_or
@@ -65,13 +65,9 @@ class Memory:
 
         # make a memory matrix
 
-        matrix = []
+        self.__memory_matrix = []
         for _ in range(2 ** (len(address_lines) - 1)):
-            matrix.append([Latch() for _ in range(8)])
-
-        self.__memory_matrix = matrix
-
-        self.__memory_matrix
+            self.__memory_matrix.append([Latch() for _ in range(8)])
 
         self.__log(f"Memory size {len(self.__memory_matrix):,} bytes")
 
@@ -128,23 +124,23 @@ class Memory:
         )
         self.__log(format_skel, "DEBG")
 
-    def set_memory_image(self, memory_image: Iterable[Iterable[Latch]]):
+    def set_memory_image(self, memory_image: list[list[Latch]]):
         from circuits.adders import dynamic_adder
 
-        memory_image += UniqueCopy(UniqueCopy([UniqueCopy([Latch()]) * 8])) * (
-            (2 ** (len(self.__address_lines) - 1)) - len(memory_image)
-        )
+        for _ in range(2 ** (len(self.__address_lines) - 1) - len(memory_image)):
+            memory_image.append([Latch() for _ in range(8)])
 
         addr = self.__address_lines.read()
         incr = ([0] * (len(self.__address_lines) - 1)) + [1]  # address increment
 
         for latches in memory_image:
             self.__data_lines.write([latch() for latch in latches])
-            addr, _ = dynamic_adder(addr, incr)
-            addr[0] = 1  # setting the first bit as control to write to memory
             self.__address_lines.write(addr)
 
             self.decode_hook()
+
+            addr, _ = dynamic_adder(addr, incr)
+            addr[0] = 1  # setting the first bit as control to write to memory
 
         for x, (image_latches, matrix_latches) in enumerate(
             zip(memory_image, self.__memory_matrix)

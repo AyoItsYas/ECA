@@ -25,7 +25,9 @@ def create_latch(charge: bool = False):
 with open(sys.argv[1], "r") as file:
     lines = file.readlines()
 
-image = [[create_latch(x == "1") for x in row] for row in lines]
+image = [[create_latch(x == "1") for x in row.strip("\n")] for row in lines]
+
+print(image)
 
 
 LOGGER = Logger()
@@ -37,12 +39,12 @@ class Computer:
         *,
         logger: Callable[[str, str], None],
     ):
-        self.clock = 5
+        self.clock = 1
 
         self.__log = lambda *x, **y: logger(*x, origin=__name__, **y)
 
         self.__data_lines = Bus()
-        self.__address_lines = Bus(4)
+        self.__address_lines = Bus(5)
 
         self.__primary_memory = RAM(
             self.__data_lines,
@@ -56,13 +58,13 @@ class Computer:
             self.__data_lines,
             self.__address_lines,
             clock=self.clock,
+            memory_module=self.__primary_memory,
             logger=LOGGER.get_logger("CPU"),
             hooks_fetch=hooks_fetch,
         )
 
     def run(self):
         while True:
-            self.__log("Running cycle!")
             self.__processing_unit.cycle()
 
 
